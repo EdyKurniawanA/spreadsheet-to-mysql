@@ -110,13 +110,16 @@ closing_sub["Source"] = df_closing["Channel_Info"]
 closing_sub["Subdistrict"] = df_closing["Subdistrict"]
 closing_sub["Age"] = df_closing["Age"]
 closing_sub["Occupation"] = df_closing["Occupation"]
+closing_sub["Batch"] = df_closing["Batch"]
 
 # Combine & Deduplicate
 df_master = pd.concat([leads_sub, closing_sub], ignore_index=True)
+df_master["Batch"] = df_master["Batch"].fillna("Leads Tracking")
 df_master["Phone_Number"] = (
     df_master["Phone_Number"].astype(str).str.replace(r"\D", "", regex=True)
 )
-df_master = df_master.drop_duplicates(subset=["Phone_Number"], keep="last")
+# Deduplikasi berdasarkan kombinasi Nomor HP DAN Batch
+df_master = df_master.drop_duplicates(subset=["Phone_Number", "Batch"], keep="last")
 df_master = df_master[df_master["Name"].astype(bool)]  # Remove empty names
 
 # --- 5. EXECUTION ---
