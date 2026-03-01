@@ -97,15 +97,20 @@ print("Generating Master Data (main_data)...")
 leads_sub = pd.DataFrame()
 leads_sub["Name"] = df_leads["Name"]
 leads_sub["Phone_Number"] = df_leads["Phone_Number"]
+leads_sub["Social_Media"] = df_leads["Social_Media"]  # <--- TAMBAHKAN INI
 leads_sub["Source"] = df_leads["Source"]
 leads_sub["Subdistrict"] = df_leads["Subdistrict"]
 leads_sub["Age"] = None
 leads_sub["Occupation"] = None
+leads_sub["Batch"] = "Leads Tracking"  # Beri label batch default untuk leads
 
 # Prepare Closing for Master
 closing_sub = pd.DataFrame()
 closing_sub["Name"] = df_closing["Name"]
 closing_sub["Phone_Number"] = df_closing["Phone_Number"]
+closing_sub["Social_Media"] = (
+    None  # <--- TAMBAHKAN INI (Closing biasanya tidak ada kolom sosmed)
+)
 closing_sub["Source"] = df_closing["Channel_Info"]
 closing_sub["Subdistrict"] = df_closing["Subdistrict"]
 closing_sub["Age"] = df_closing["Age"]
@@ -114,13 +119,19 @@ closing_sub["Batch"] = df_closing["Batch"]
 
 # Combine & Deduplicate
 df_master = pd.concat([leads_sub, closing_sub], ignore_index=True)
-df_master["Batch"] = df_master["Batch"].fillna("Leads Tracking")
+
+# Pastikan data kosong diisi None agar masuk ke MySQL sebagai NULL
+df_master["Social_Media"] = df_master["Social_Media"].replace({"": None})
+
 df_master["Phone_Number"] = (
     df_master["Phone_Number"].astype(str).str.replace(r"\D", "", regex=True)
 )
-# Deduplikasi berdasarkan kombinasi Nomor HP DAN Batch
-df_master = df_master.drop_duplicates(subset=["Phone_Number", "Batch"], keep="last")
-df_master = df_master[df_master["Name"].astype(bool)]  # Remove empty names
+
+# Deduplikasi: Masukkan Social_Media ke dalam subset agar data unik terjaga
+df_master = df_master.drop_duplicates(
+    subset=["Name", "Phone_Number", "Social_Media", "Batch"], keep="last"
+)
+df_master = df_master[df_master["Name"].astype(bool)]
 
 # --- 5. EXECUTION ---
 print("Starting synchronization...")
@@ -165,7 +176,19 @@ closing_cols = [
     "Paid_off",
 ]
 
-master_cols = ["Name", "Age", "Phone_Number", "Subdistrict", "Occupation", "Source"]
+# --- 5. EXECUTION ---
+# ... (leads_cols dan closing_cols tetap sama) ...
+
+# Update master_cols di sini
+master_cols = [
+    "Name",
+    "Age",
+    "Phone_Number",
+    "Social_Media",
+    "Subdistrict",
+    "Occupation",
+    "Source",
+]
 
 # Sync all 3 tables
 push_to_mysql(df_leads_merged, "leads_tracking", leads_cols)
